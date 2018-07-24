@@ -66,7 +66,7 @@ import struct
 import StringIO
 from PIL import Image
 
-SUPPORT_RLE24_COMPRESSIONT = 1
+SUPPORT_RLE24_COMPRESSIONT = 0
 
 ## get header
 def GetImgHeader(size, compressed=0, real_bytes=0):
@@ -222,11 +222,21 @@ def GetImageBody(img, compressed=0):
         print ("sorry, can't support this format")
         sys.exit()
 
-    if compressed == 1:
-        return encodeRLE24(background)
-    else:
-        r, g, b = background.split()
-        return Image.merge("RGB",(b,g,r)).tostring()
+    r, g, b = background.split()
+    cin = StringIO.StringIO()
+    cin.write(Image.merge("RGB",(r,b,g)).tobytes())
+    cout = StringIO.StringIO()
+    count = cin.tell()
+    cin.seek(0)
+    for i in xrange(count / 3):
+        blue = ord(cin.read(1)) * 32 / 256
+        red = ord(cin.read(1)) * 32 / 256
+        green = ord(cin.read(1)) * 64 / 256
+        v = (blue << 11) | (green << 5) | red
+        cout.write(struct.pack("B", v        & 0xff))
+        cout.write(struct.pack("B", (v >> 8) & 0xff))
+    return cout.getvalue()
+
 
 ## make a image
 
